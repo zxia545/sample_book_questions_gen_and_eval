@@ -8,6 +8,7 @@ import subprocess
 from openai import OpenAI
 import json
 import os
+import codecs
 
 
 def filter_and_fix_file(file_path):
@@ -30,37 +31,40 @@ def filter_and_fix_file(file_path):
         outfile.writelines(valid_lines)
 
 def read_jsonl(file_path):
-    filter_and_fix_file(file_path)
-    with open(file_path, 'r', encoding='utf-8') as f:
+    """
+    Reads a JSONL file, ensuring proper UTF-8 handling and fixing any Unicode escape sequences.
+    Yields each JSON object as a dictionary.
+    """
+    filter_and_fix_file(file_path)  # Ensure invalid lines are removed
+    with codecs.open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
-            if line.strip():
-                yield json.loads(line)
+            line = line.strip()
+            if line:
+                try:
+                    data = json.loads(line)  # Load JSON and decode Unicode properly
+                    yield data
+                except json.JSONDecodeError as e:
+                    print(f"[ERROR] Skipping invalid JSON line in {file_path}: {line} - {e}")
+
 
 def write_jsonl(file_path, data_list, append=False):
     """
-    Writes a list of dictionaries to a JSONL file.
-    If append is True, appends the data to the file instead of overwriting it.
+    Writes a list of dictionaries to a JSONL file with proper UTF-8 encoding.
+    Ensures Unicode characters are stored correctly without escaping.
     """
     mode = 'a' if append else 'w'
-    
-    # check if file exists
-    if not os.path.exists(file_path):
-        # check the parent directory and create if it doesn't exist
-        parent_dir = os.path.dirname(file_path)
-        if not os.path.exists(parent_dir):
-            os.makedirs(parent_dir)
-        
-        # create the file if it doesn't exist
-        with open(file_path, 'w', encoding='utf-8') as f:
-            pass
-        
-        # update mode to write
-        mode = 'w'
 
+    # Ensure the directory exists before writing
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    with open(file_path, mode, encoding='utf-8') as f:
+    with codecs.open(file_path, mode, encoding='utf-8') as f:
         for item in data_list:
-            f.write(json.dumps(item, ensure_ascii=False) + '\n')
+            # Decode any escaped Unicode characters before writing
+            json_line = json.dumps(item, ensure_ascii=False)
+            json_line = json_line.encode('utf-8').decode('utf-8')  # Ensures proper encoding
+            
+            f.write(json_line + '\n')
+            
 
 def chat_completion(api_base: str, model_name: str, messages: list, max_tokens=256, temperature=0.7):
     """
