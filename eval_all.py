@@ -70,16 +70,24 @@ def eval_jsonl(path_to_jsonl, api_base, model_name, max_tokens=256, temperature=
             }
         # For fill and open types, use a rating prompt.
         elif q_type in ["fill", "open"]:
-            rating_sys_msg = """You are a helpful AI assistant. You will use your coding and language skills to evaluate the quality of an answer by comparing it with the ground truth.
-You are given:
-    1. A problem.
-    2. A reply with the answer to the problem.
-    3. A ground truth answer.
-Please do the following:
-1. Extract the answer in the reply.
-2. Compare the answer with the ground truth answer.
-3. Provide a rating on a scale from 5 (answer is almost identical to the ground truth) to 1 (answer is completely off).
-Please output your evaluation as: "Rating: X. Explanation: <your explanation>." """
+            rating_sys_msg = """You are a helpful AI assistant. Your task is to evaluate the quality of a given answer by comparing it with the ground truth.
+            You are provided with:
+                1. A problem statement.
+                2. A reply containing the answer to the problem.
+                3. The ground truth answer.
+            Please perform the following steps:
+            1. Extract the answer from the reply.
+            2. Compare the extracted answer with the ground truth answer.
+            3. Assign a rating from 1 to 5 based on the following criteria:
+                - **Rating 5:** The reply is almost identical to the ground truth. The answer is complete, accurate, and uses nearly the same formulation.
+                - **Rating 4:** The reply is mostly correct, with only minor errors or omissions that do not impact the overall correctness.
+                - **Rating 3:** The reply is partially correct. It demonstrates some understanding but includes noticeable errors or missing key details.
+                - **Rating 2:** The reply is largely incorrect or incomplete, showing significant misunderstandings of the problem.
+                - **Rating 1:** The reply is completely off; it does not address the problem or is entirely incorrect.
+            4. Output your evaluation in the exact format: "Rating: X. Explanation: <your explanation>." 
+            Ensure that your explanation clearly justifies the assigned rating.
+            """
+
             messages = [
                 {"role": "system", "content": rating_sys_msg},
                 {"role": "user", "content": user_prompt}
