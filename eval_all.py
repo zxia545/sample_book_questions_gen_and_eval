@@ -150,25 +150,29 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate the LLM on a jsonl file')
     parser.add_argument('--api_base', type=str, default="https://api.openai.com", help='API base URL')
     parser.add_argument('--model_name', type=str, default="text-davinci-003", help='Model name')
-    parser.add_argument('--path_to_jsonl_list', type=list, help='List of paths to the input JSONL files')
+    parser.add_argument('--path_to_jsonl_list', type=str, help='List of paths to the input JSONL files')
     parser.add_argument('--max_tokens', type=int, default=256, help='Max tokens')
     parser.add_argument('--temperature', type=float, default=0.7, help='Temperature')
     parser.add_argument('--model_path', type=str, default=None, help='Path to the model')
     parser.add_argument('--port', type=int, default=8000, help='Port')
     parser.add_argument('--gpu', type=int, default=1, help='GPU')
     parser.add_argument('--threads', type=int, default=10, help='Threads')
-    parser.add_argument('--output_file_list', type=list, default=None, help='List of output file paths')
+    parser.add_argument('--output_file_list', type=str, default=None, help='List of output file paths')
     
     args = parser.parse_args()
     
     # When a model path is provided, we start the vLLM server.
     if args.model_path:
         process_id = start_vllm_server(args.model_path, args.model_name, args.port, args.gpu)
-        for path_to_jsonl, output_path in zip(args.path_to_jsonl_list, args.output_file_list):
+        path_json_list = args.path_to_jsonl_list.split(',')
+        output_file_list = args.output_file_list.split(',')
+        for path_to_jsonl, output_path in zip(path_json_list, output_file_list):
             eval_jsonl(path_to_jsonl, args.api_base, args.model_name, args.max_tokens,
                        args.temperature, args.threads, output_path)
         stop_vllm_server(process_id)
     else:
-        for path_to_jsonl, output_path in zip(args.path_to_jsonl_list, args.output_file_list):
+        path_json_list = args.path_to_jsonl_list.split(',')
+        output_file_list = args.output_file_list.split(',')
+        for path_to_jsonl, output_path in zip(path_json_list, output_file_list):
             eval_jsonl(path_to_jsonl, args.api_base, args.model_name, args.max_tokens,
                        args.temperature, args.threads, output_path)
