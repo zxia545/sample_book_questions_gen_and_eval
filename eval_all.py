@@ -66,7 +66,8 @@ def eval_jsonl(path_to_jsonl, api_base, model_name, max_tokens=256, temperature=
                 "llm_answer": llm_answer,
                 "reference_answer": reference_answer,
                 "eval_feedback": response,
-                "eval_result": eval_result
+                "eval_result": eval_result,
+                "type": q_type
             }
         # For fill and open types, use a rating prompt.
         elif q_type in ["fill", "open"]:
@@ -100,7 +101,8 @@ def eval_jsonl(path_to_jsonl, api_base, model_name, max_tokens=256, temperature=
                 "llm_answer": llm_answer,
                 "reference_answer": reference_answer,
                 "eval_feedback": response,
-                "eval_rating": rating
+                "eval_rating": rating,
+                "type": q_type
             }
         # Fallback to judge prompt if type is unspecified or unrecognized.
         else:
@@ -116,7 +118,8 @@ def eval_jsonl(path_to_jsonl, api_base, model_name, max_tokens=256, temperature=
                 "llm_answer": llm_answer,
                 "reference_answer": reference_answer,
                 "eval_feedback": response,
-                "eval_result": eval_result
+                "eval_result": eval_result,
+                "type": q_type
             }
     
     win_counter = 0
