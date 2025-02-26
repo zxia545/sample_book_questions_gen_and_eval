@@ -46,9 +46,9 @@ def eval_jsonl(path_to_jsonl, api_base, model_name, max_tokens=256, temperature=
         
         # For single-choice or multi-choice, append choices if present.
         if q_type in ["single-choice", "multi-choice"]:
-            choices = data_item.get("choices", [])
+            choices = data_item.get("choices")
             if choices:
-                question += "\nOptions:\n" + "\n".join(choices)
+                question += "\nOptions:\n" + choices
         
         user_prompt = "Problem: " + question + f"\n\nReply: {llm_answer}\n\nGround truth answer: " + reference_answer
 
