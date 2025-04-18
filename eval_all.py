@@ -51,6 +51,8 @@ def eval_jsonl(path_to_jsonl, api_base, model_name, max_tokens=256, temperature=
                 question += "\nOptions:\n" + choices
         
         user_prompt = "Problem: " + question + f"\n\nReply: {llm_answer}\n\nGround truth answer: " + reference_answer
+        if q_type in ["open", "fill"]:
+            user_prompt = "Problem: " + question + f"\n\nReply: {llm_answer}\n\nGround truth answer: " + reference_answer + "Ground turth explanation: " + data_item.get("explanation", "")
 
         # For judge, single-choice and multi-choice types, use the original prompt.
         if q_type in ["judge", "single-choice", "multi-choice"]:
@@ -71,15 +73,17 @@ def eval_jsonl(path_to_jsonl, api_base, model_name, max_tokens=256, temperature=
             }
         # For fill and open types, use a rating prompt.
         elif q_type in ["fill", "open"]:
-            rating_sys_msg = """You are a helpful AI assistant. Your task is to evaluate the quality of a given answer by comparing it with the ground truth.
+            rating_sys_msg = """You are a helpful AI assistant. Your task is to evaluate the quality of a given answer by comparing it with the ground truth with it explanation.
             You are provided with:
                 1. A problem statement.
                 2. A reply containing the answer to the problem.
                 3. The ground truth answer.
+                4. The ground truth explanation.
             Please perform the following steps:
             1. Extract the answer from the reply.
             2. Compare the extracted answer with the ground truth answer.
-            3. Assign a rating from 1 to 5 based on the following criteria:
+            3. Evaluate the quality of the reply based on its correctness and completeness and consider the ground truth explanation.
+            4. Assign a rating from 1 to 5 based on the following criteria:
                 - **Rating 5:** The reply is almost identical to the ground truth. The answer is complete, accurate, and uses nearly the same formulation.
                 - **Rating 4:** The reply is mostly correct, with only minor errors or omissions that do not impact the overall correctness.
                 - **Rating 3:** The reply is partially correct. It demonstrates some understanding but includes noticeable errors or missing key details.
