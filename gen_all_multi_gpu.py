@@ -18,7 +18,6 @@ def gen_answers(input_file, output_file, api_base, model_name,
     """
     Generates answers for different datasets using tailored system prompts.
     """
-    # Derive the domain from the input filename
     base_name = os.path.basename(input_file)
     domain = base_name.split("-")[0].lower()
     system_prompt = SYSTEM_PROMPTS.get(
@@ -50,6 +49,7 @@ def gen_answers(input_file, output_file, api_base, model_name,
         data_item["llm_answer"] = response
         return data_item
 
+    from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=threads) as executor:
         futures = [executor.submit(process_data, item) for item in input_data_list]
         for future in futures:
@@ -62,20 +62,24 @@ def gen_answers(input_file, output_file, api_base, model_name,
 def process_model(model_name, model_path, input_files, output_dir,
                   port_start, max_tokens, temperature, threads, gpu_queue):
     gpu_id = gpu_queue.get()
-    port = port_start + gpu_id
-    api_base = f"http://localhost:{port}"
-    print(f"[INFO] Launching vLLM for {model_name} on GPU {gpu_id}, port {port}")
-    pid = start_vllm_server(model_path, model_name, port, gpu_id)
     try:
-        for input_file in input_files:
-            out_file = os.path.join(output_dir, f"{model_name}_{os.path.basename(input_file)}")
-            gen_answers(
-                input_file, out_file, api_base, model_name,
-                max_tokens=max_tokens, temperature=temperature, threads=threads
-            )
+        # Restrict this process to the assigned GPU
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+        port = port_start + gpu_id
+        api_base = f"http://localhost:{port}"
+        print(f"[INFO] Launching vLLM for {model_name} on GPU {gpu_id}, port {port}")
+        pid = start_vllm_server(model_path, model_name, port, gpu_id)
+        try:
+            for input_file in input_files:
+                out_file = os.path.join(output_dir, f"{model_name}_{os.path.basename(input_file)}")
+                gen_answers(
+                    input_file, out_file, api_base, model_name,
+                    max_tokens=max_tokens, temperature=temperature, threads=threads
+                )
+        finally:
+            stop_vllm_server(pid)
+            print(f"[INFO] Stopped vLLM for {model_name} (GPU {gpu_id})")
     finally:
-        stop_vllm_server(pid)
-        print(f"[INFO] Stopped vLLM for {model_name} (GPU {gpu_id})")
         gpu_queue.put(gpu_id)
 
 
@@ -130,7 +134,7 @@ def main():
     with ThreadPoolExecutor(max_workers=len(model_names)) as executor:
         for model_name in model_names:
             model_path = os.path.join(args.models_dir, model_name)
-            executor.submit(
+            executor.submit(\
                 process_model,
                 model_name, model_path, input_files, args.output_dir,
                 args.port_start, args.max_tokens,
